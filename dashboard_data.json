@@ -1,0 +1,161 @@
+{
+  "totals": {
+    "orders": 5000,
+    "completed": 4903,
+    "cancelled": 97,
+    "first_day": "2026-07-01",
+    "last_day": "2026-09-30",
+    "median_exam_to_emr_min": 186,
+    "interface_error_orders": 387
+  },
+  "stages": [
+    {
+      "stage": "Order to RIS",
+      "median": 1.0,
+      "p90": 2.1
+    },
+    {
+      "stage": "RIS to scheduled",
+      "median": 27.3,
+      "p90": 80.4
+    },
+    {
+      "stage": "Arrival to exam start",
+      "median": 11.3,
+      "p90": 34.5
+    },
+    {
+      "stage": "Exam duration",
+      "median": 13.0,
+      "p90": 35.7
+    },
+    {
+      "stage": "Exam done to PACS",
+      "median": 2.5,
+      "p90": 5.0
+    },
+    {
+      "stage": "PACS to report signed",
+      "median": 171.8,
+      "p90": 560.4
+    },
+    {
+      "stage": "Report signed to EMR",
+      "median": 2.0,
+      "p90": 4.1
+    }
+  ],
+  "by_priority": [
+    {
+      "priority": "STAT",
+      "orders": 556,
+      "median": 23,
+      "p90": 47,
+      "target_min": 60,
+      "pct_within_target": 95.7
+    },
+    {
+      "priority": "URGENT",
+      "orders": 1401,
+      "median": 85,
+      "p90": 213,
+      "target_min": 240,
+      "pct_within_target": 92.4
+    },
+    {
+      "priority": "ROUTINE",
+      "orders": 2946,
+      "median": 273,
+      "p90": 729,
+      "target_min": 1440,
+      "pct_within_target": 99.6
+    }
+  ],
+  "by_shift": [
+    {
+      "priority": "STAT",
+      "priority_ord": 1,
+      "shift": "Day",
+      "orders": 387,
+      "median": 21
+    },
+    {
+      "priority": "STAT",
+      "priority_ord": 1,
+      "shift": "Night",
+      "orders": 169,
+      "median": 29
+    },
+    {
+      "priority": "URGENT",
+      "priority_ord": 2,
+      "shift": "Day",
+      "orders": 1073,
+      "median": 74
+    },
+    {
+      "priority": "URGENT",
+      "priority_ord": 2,
+      "shift": "Night",
+      "orders": 328,
+      "median": 140
+    },
+    {
+      "priority": "ROUTINE",
+      "priority_ord": 3,
+      "shift": "Day",
+      "orders": 2695,
+      "median": 255
+    },
+    {
+      "priority": "ROUTINE",
+      "priority_ord": 3,
+      "shift": "Night",
+      "orders": 251,
+      "median": 762
+    }
+  ],
+  "by_modality": [
+    {
+      "modality": "CT",
+      "orders": 1458,
+      "median": 196
+    },
+    {
+      "modality": "MR",
+      "orders": 744,
+      "median": 292
+    },
+    {
+      "modality": "XR",
+      "orders": 2701,
+      "median": 139
+    }
+  ],
+  "interface_errors": [
+    {
+      "error_type": "ORDER_NOT_RECEIVED",
+      "source_system": "EMR",
+      "at_status": "RECEIVED_RIS",
+      "errors": 148,
+      "pct_of_orders": 3.0,
+      "median_min_to_fix": 94
+    },
+    {
+      "error_type": "RESULT_NOT_DELIVERED",
+      "source_system": "RIS",
+      "at_status": "RESULT_IN_EMR",
+      "errors": 144,
+      "pct_of_orders": 2.9,
+      "median_min_to_fix": 187
+    },
+    {
+      "error_type": "PATIENT_ID_MISMATCH",
+      "source_system": "PACS",
+      "at_status": "IMAGES_IN_PACS",
+      "errors": 103,
+      "pct_of_orders": 2.1,
+      "median_min_to_fix": 143
+    }
+  ]
+}

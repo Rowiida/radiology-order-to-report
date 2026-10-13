@@ -1,0 +1,368 @@
+<title>Radiology Turnaround Dashboard</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&display=swap">
+<style>
+/* Layout: one narrow header, a KPI strip, then findings as full-width and half-width chart panels.
+   Palette: green-grey neutrals, blue and orange from the reference categorical palette for Day and Night only. */
+:root {
+  color-scheme: light;
+  --bg: #f1f2f0;
+  --surface: #fcfcfb;
+  --ink: #0b0b0b;
+  --ink-2: #52514e;
+  --ink-3: #6b6a65;
+  --line: #dcdcd6;
+  --grid: #e9e8e3;
+  --bar-quiet: #c4c3bc;
+  --bar-emph: #1f1f1e;
+  --day: #2a78d6;
+  --night: #eb6834;
+  --font-sans: 'IBM Plex Sans', system-ui, -apple-system, 'Segoe UI', sans-serif;
+  --font-mono: 'IBM Plex Mono', ui-monospace, 'SFMono-Regular', Menlo, monospace;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    color-scheme: dark;
+    --bg: #111312;
+    --surface: #1a1a19;
+    --ink: #f0efec;
+    --ink-2: #c3c2b7;
+    --ink-3: #9a998f;
+    --line: #353531;
+    --grid: #2a2a27;
+    --bar-quiet: #4b4a45;
+    --bar-emph: #e9e8e2;
+    --day: #3987e5;
+    --night: #d95926;
+  }
+}
+:root[data-theme="dark"] {
+  color-scheme: dark;
+  --bg: #111312;
+  --surface: #1a1a19;
+  --ink: #f0efec;
+  --ink-2: #c3c2b7;
+  --ink-3: #9a998f;
+  --line: #353531;
+  --grid: #2a2a27;
+  --bar-quiet: #4b4a45;
+  --bar-emph: #e9e8e2;
+  --day: #3987e5;
+  --night: #d95926;
+}
+
+* { box-sizing: border-box; }
+body {
+  background: var(--bg);
+  color: var(--ink);
+  font-family: var(--font-sans);
+  font-size: 15px;
+  line-height: 1.5;
+  padding-inline: 16px;
+  padding-block: 28px 56px;
+}
+.page { max-width: 1040px; margin-inline: auto; display: flex; flex-direction: column; gap: 20px; }
+h1 { font-size: 1.75rem; line-height: 1.2; font-weight: 600; margin: 0; text-wrap: balance; }
+h2 { font-size: 1.1rem; line-height: 1.3; font-weight: 600; margin: 0; text-wrap: balance; }
+p { margin: 0; }
+.sub { color: var(--ink-2); max-width: 65ch; }
+.mono { font-family: var(--font-mono); font-variant-numeric: tabular-nums; }
+
+header { display: flex; flex-direction: column; gap: 10px; }
+.badge {
+  align-self: flex-start;
+  font-family: var(--font-mono);
+  font-size: 0.75rem;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  border: 1px solid var(--ink-3);
+  color: var(--ink);
+  padding: 3px 10px;
+  border-radius: 4px;
+}
+
+.kpis { display: grid; grid-template-columns: repeat(4, 1fr); background: var(--surface); border: 1px solid var(--line); border-radius: 8px; }
+.kpi { padding: 16px 18px; display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.kpi + .kpi { border-left: 1px solid var(--line); }
+.kpi .k { font-size: 0.8rem; color: var(--ink-2); }
+.kpi .v { font-family: var(--font-mono); font-variant-numeric: tabular-nums; font-size: 1.75rem; font-weight: 500; line-height: 1.2; }
+.kpi .v small { font-size: 0.85rem; color: var(--ink-2); font-weight: 400; margin-left: 4px; }
+.kpi .n { font-size: 0.8rem; color: var(--ink-3); }
+
+.panel { background: var(--surface); border: 1px solid var(--line); border-radius: 8px; padding: 20px; display: flex; flex-direction: column; gap: 14px; min-width: 0; }
+.panel .note { color: var(--ink-3); font-size: 0.82rem; max-width: 70ch; }
+.cols { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; align-items: start; }
+
+/* bar rows */
+.chart { --lblw: 190px; --valw: 128px; display: flex; flex-direction: column; gap: 8px; }
+.row { display: grid; grid-template-columns: var(--lblw) 1fr var(--valw); column-gap: 12px; align-items: center; border-radius: 4px; }
+.row:hover, .row:focus-visible { background: var(--grid); outline: none; }
+.lbl { font-size: 0.88rem; color: var(--ink); }
+.track {
+  position: relative; height: 22px;
+  background-image: linear-gradient(to right, var(--grid) 1px, transparent 1px);
+  background-size: var(--step, 25%) 100%;
+  border-right: 1px solid var(--grid);
+}
+.bar { position: absolute; left: 0; top: 4px; height: 14px; min-width: 2px; border-radius: 0 3px 3px 0; background: var(--bar-quiet); }
+.bar.emph { background: var(--bar-emph); }
+.bar.day { background: var(--day); }
+.bar.night { background: var(--night); }
+.whisk { position: absolute; top: 10px; height: 2px; background: var(--ink-3); }
+.cap { position: absolute; top: 5px; width: 2px; height: 12px; margin-left: -1px; background: var(--ink-3); }
+.val { font-family: var(--font-mono); font-variant-numeric: tabular-nums; font-size: 0.85rem; text-align: right; white-space: nowrap; }
+.val span { color: var(--ink-3); margin-left: 6px; }
+.axis { position: relative; height: 18px; margin-left: calc(var(--lblw) + 12px); margin-right: calc(var(--valw) + 12px); }
+.axis span { position: absolute; white-space: nowrap; transform: translateX(-50%); font-family: var(--font-mono); font-size: 0.72rem; color: var(--ink-3); }
+.axis span:first-child { transform: none; }
+.axis span:last-child { transform: translateX(-100%); }
+.legend { display: flex; flex-wrap: wrap; gap: 6px 18px; font-size: 0.85rem; color: var(--ink-2); }
+.legend i { display: inline-block; width: 12px; height: 12px; border-radius: 2px; margin-right: 6px; vertical-align: -1px; }
+.group { display: flex; flex-direction: column; gap: 4px; padding-top: 6px; }
+.group + .group { border-top: 1px solid var(--grid); margin-top: 4px; padding-top: 10px; }
+.group h3 { margin: 0 0 2px; font-size: 0.78rem; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; color: var(--ink-2); }
+.shift .chart { --lblw: 52px; --valw: 84px; }
+.modality .chart { --lblw: 52px; --valw: 84px; }
+
+/* tables */
+.tbl { overflow-x: auto; }
+table { border-collapse: collapse; width: 100%; font-size: 0.88rem; }
+th, td { text-align: right; padding: 8px 8px; border-bottom: 1px solid var(--grid); white-space: nowrap; }
+th:first-child, td:first-child { text-align: left; }
+th { font-weight: 500; color: var(--ink-2); font-size: 0.78rem; letter-spacing: 0.02em; }
+td.num { font-family: var(--font-mono); font-variant-numeric: tabular-nums; }
+.meter { display: inline-block; vertical-align: middle; width: 64px; height: 8px; background: var(--grid); border-radius: 2px; margin-left: 8px; overflow: hidden; }
+.meter i { display: block; height: 100%; background: var(--bar-emph); }
+
+details { background: var(--surface); border: 1px solid var(--line); border-radius: 8px; padding: 14px 20px; }
+summary { cursor: pointer; font-weight: 500; }
+summary:focus-visible { outline: 2px solid var(--day); outline-offset: 3px; }
+details[open] summary { margin-bottom: 14px; }
+details .tbl + h3 { margin-top: 18px; }
+details h3 { font-size: 0.9rem; margin: 0 0 6px; font-weight: 600; }
+.notes { display: flex; flex-direction: column; gap: 6px; padding-left: 18px; margin: 0; color: var(--ink-2); font-size: 0.88rem; max-width: 80ch; }
+
+.tip {
+  position: fixed; z-index: 10; pointer-events: none;
+  background: var(--ink); color: var(--bg);
+  font-size: 0.8rem; line-height: 1.35; padding: 6px 10px; border-radius: 4px; max-width: 280px;
+}
+
+@media (max-width: 760px) {
+  .kpis { grid-template-columns: 1fr 1fr; }
+  .kpi:nth-child(3) { border-left: 0; }
+  .kpi:nth-child(n+3) { border-top: 1px solid var(--line); }
+  .cols { grid-template-columns: 1fr; }
+}
+@media (max-width: 640px) {
+  .chart, .shift .chart, .modality .chart { --lblw: 0px; --valw: 0px; }
+  .row { grid-template-columns: 1fr auto; row-gap: 2px; }
+  .row .lbl { grid-column: 1; }
+  .row .val { grid-column: 2; grid-row: 1; }
+  .row .track { grid-column: 1 / -1; grid-row: 2; }
+  .shift .row, .modality .row { grid-template-columns: 52px 1fr auto; }
+  .shift .row .lbl, .modality .row .lbl, .shift .row .track, .modality .row .track, .shift .row .val, .modality .row .val { grid-column: auto; grid-row: auto; }
+  .axis, .shift .axis, .modality .axis { margin-left: 0; margin-right: 0; }
+  .shift .axis, .modality .axis { margin-left: 64px; margin-right: 100px; }
+  .kpi .v { font-size: 1.4rem; }
+}
+</style>
+
+<div class="page">
+  <header>
+    <span class="badge">Synthetic demo data</span>
+    <h1>Radiology Turnaround</h1>
+    <p class="sub" id="lead"></p>
+  </header>
+
+  <section class="kpis" id="kpis" aria-label="Key figures"></section>
+
+  <section class="panel" aria-labelledby="h-stages">
+    <h2 id="h-stages"></h2>
+    <div class="chart" id="stages"></div>
+    <p class="note">Bars show the median minutes in each stage; the line ends at the 90th percentile. The wait between booking and arrival is left out because outpatients book slots days ahead by design.</p>
+  </section>
+
+  <div class="cols">
+    <section class="panel" aria-labelledby="h-priority">
+      <h2 id="h-priority"></h2>
+      <div class="tbl"><table id="priority"></table></div>
+      <p class="note">Minutes from images in PACS to a signed report. The targets are examples, not a standard.</p>
+    </section>
+
+    <section class="panel shift" aria-labelledby="h-shift">
+      <h2 id="h-shift"></h2>
+      <div class="legend" aria-hidden="true"><span><i style="background:var(--day)"></i>Day, images in PACS 07:00 to 19:00</span><span><i style="background:var(--night)"></i>Night, 19:00 to 07:00</span></div>
+      <div id="shift"></div>
+      <p class="note">Median minutes from images in PACS to a signed report.</p>
+    </section>
+  </div>
+
+  <div class="cols">
+    <section class="panel modality" aria-labelledby="h-modality">
+      <h2 id="h-modality"></h2>
+      <div class="chart" id="modality"></div>
+      <p class="note">Median minutes from images in PACS to a signed report. XR is X-ray, CT is computed tomography, MR is MRI.</p>
+    </section>
+
+    <section class="panel" aria-labelledby="h-errors">
+      <h2 id="h-errors"></h2>
+      <div class="tbl"><table id="errors"></table></div>
+      <p class="note">Each row is a handoff between two systems where the message failed and was fixed later.</p>
+    </section>
+  </div>
+
+  <section class="panel" aria-labelledby="h-notes">
+    <h2 id="h-notes">How to read these numbers</h2>
+    <ul class="notes">
+      <li>Every order, time and error here was generated by a script with fixed assumptions. No patient or hospital data was used.</li>
+      <li>The script builds in a few patterns: routine night studies wait for the morning, CT and MR take longer to read than X-ray, and 2 to 3 percent of messages fail at each of three handoffs. The dashboard shows that the queries find them, not how a real hospital performs.</li>
+      <li>All timestamps come from one status history table, one row per status change. The same queries would run on real RIS and PACS message logs.</li>
+    </ul>
+  </section>
+
+  <details>
+    <summary>View the data as tables</summary>
+    <h3>Minutes per stage</h3><div class="tbl"><table id="t-stages"></table></div>
+    <h3>Report turnaround by shift</h3><div class="tbl"><table id="t-shift"></table></div>
+    <h3>Report turnaround by modality</h3><div class="tbl"><table id="t-modality"></table></div>
+  </details>
+</div>
+
+<script>
+const D = __DATA__;
+const n0 = v => Math.round(Number(v)).toLocaleString('en-US');
+const pct = (v, max) => (Math.max(0, v) / max * 100).toFixed(2) + '%';
+const label = {
+  ORDER_NOT_RECEIVED: 'Order not received',
+  PATIENT_ID_MISMATCH: 'Patient ID mismatch',
+  RESULT_NOT_DELIVERED: 'Result not delivered'
+};
+const handoff = { RECEIVED_RIS: 'EMR to RIS', IMAGES_IN_PACS: 'Modality to PACS', RESULT_IN_EMR: 'RIS to EMR' };
+const cap = s => (s === 'STAT' ? s : s.charAt(0) + s.slice(1).toLowerCase());
+const T = D.totals;
+const fmtDay = d => new Date(d + 'T00:00:00Z').toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric', timeZone: 'UTC' });
+
+/* lead + KPIs */
+const signed = D.stages.find(s => s.stage === 'PACS to report signed');
+document.getElementById('lead').textContent =
+  `${n0(T.orders)} imaging orders from ${fmtDay(T.first_day)} to ${fmtDay(T.last_day)}, followed from the EMR order to the signed report in the EMR.`;
+document.getElementById('kpis').innerHTML = [
+  ['Completed reports', n0(T.completed), '', `${n0(T.cancelled)} orders cancelled`],
+  ['Report turnaround', n0(signed.median), 'min', 'median, images in PACS to signed'],
+  ['Exam to result in EMR', n0(T.median_exam_to_emr_min), 'min', 'median, exam done to result filed'],
+  ['Orders with an interface error', (T.interface_error_orders / T.orders * 100).toFixed(1) + '%', '', `${n0(T.interface_error_orders)} of ${n0(T.orders)} orders`]
+].map(([k, v, u, n]) => `<div class="kpi"><span class="k">${k}</span><span class="v">${v}${u ? `<small>${u}</small>` : ''}</span><span class="n">${n}</span></div>`).join('');
+
+/* bar rows with optional whisker */
+function axis(scale, step) {
+  let ticks = '';
+  for (let v = 0; v <= scale; v += step) ticks += `<span style="left:${pct(v, scale)}">${v}${v === scale ? ' min' : ''}</span>`;
+  return `<div class="axis" aria-hidden="true">${ticks}</div>`;
+}
+function rows(items, { scale, step, cls, emphKey }) {
+  return items.map(r => {
+    const tip = r.tip;
+    return `<div class="row" tabindex="0" data-tip="${tip}">
+      <div class="lbl">${r.label}</div>
+      <div class="track" style="--step:${pct(step, scale)}">
+        <span class="bar ${r.cls || cls || ''} ${r.key === emphKey ? 'emph' : ''}" style="width:${pct(r.value, scale)}"></span>
+        ${r.p90 != null ? `<span class="whisk" style="left:${pct(r.value, scale)};width:${pct(r.p90 - r.value, scale)}"></span><span class="cap" style="left:${pct(r.p90, scale)}"></span>` : ''}
+      </div>
+      <div class="val"><b>${n0(r.value)}</b> min${r.p90 != null ? `<span>p90 ${n0(r.p90)}</span>` : ''}</div>
+    </div>`;
+  }).join('');
+}
+
+/* 1. stages */
+const longest = D.stages.reduce((a, b) => (b.median > a.median ? b : a));
+document.getElementById('h-stages').textContent =
+  `${longest.stage} has the longest median wait, ${n0(longest.median)} minutes`;
+{
+  const maxV = Math.max(...D.stages.map(s => s.p90)), step = 200, scale = Math.ceil(maxV / step) * step;
+  const items = D.stages.map(s => ({
+    key: s.stage, label: s.stage, value: s.median, p90: s.p90,
+    tip: `${s.stage}: median ${n0(s.median)} min, 90th percentile ${n0(s.p90)} min`
+  }));
+  document.getElementById('stages').innerHTML = rows(items, { scale, step, emphKey: longest.stage }) + axis(scale, step);
+}
+
+/* 2. priority table */
+const stat = D.by_priority.find(p => p.priority === 'STAT');
+document.getElementById('h-priority').textContent =
+  `${cap(stat.priority)} reports are signed within ${stat.target_min} minutes ${stat.pct_within_target}% of the time`;
+document.getElementById('priority').innerHTML =
+  `<thead><tr><th>Priority</th><th>Orders</th><th>Median</th><th>90th pct</th><th>Target</th><th>Within target</th></tr></thead><tbody>` +
+  D.by_priority.map(p => `<tr><td>${cap(p.priority)}</td><td class="num">${n0(p.orders)}</td><td class="num">${n0(p.median)}</td><td class="num">${n0(p.p90)}</td><td class="num">${n0(p.target_min)}</td><td class="num">${p.pct_within_target}%<span class="meter"><i style="width:${p.pct_within_target}%"></i></span></td></tr>`).join('') + `</tbody>`;
+
+/* 3. shift */
+{
+  const rt = D.by_shift.filter(s => s.priority === 'ROUTINE');
+  const day = rt.find(s => s.shift === 'Day').median, night = rt.find(s => s.shift === 'Night').median;
+  const ratio = (night / day).toFixed(1).replace(/\.0$/, '');
+  document.getElementById('h-shift').textContent = `Routine reports read at night take ${ratio} times as long as by day`;
+  const maxV = Math.max(...D.by_shift.map(s => s.median)), step = 200, scale = Math.ceil(maxV / step) * step;
+  const order = ['STAT', 'URGENT', 'ROUTINE'];
+  document.getElementById('shift').innerHTML = order.map(pr => {
+    const items = D.by_shift.filter(s => s.priority === pr).sort((a, b) => (a.shift === 'Day' ? -1 : 1)).map(s => ({
+      label: s.shift, value: s.median, cls: s.shift.toLowerCase(),
+      tip: `${cap(pr)}, ${s.shift.toLowerCase()}: median ${n0(s.median)} min across ${n0(s.orders)} orders`
+    }));
+    return `<div class="group"><h3>${cap(pr)}</h3><div class="chart">${rows(items, { scale, step })}</div></div>`;
+  }).join('') + `<div class="chart">${axis(scale, step)}</div>`;
+}
+
+/* 4. modality */
+{
+  const slow = D.by_modality.reduce((a, b) => (b.median > a.median ? b : a));
+  document.getElementById('h-modality').textContent = `${slow.modality} reports take longest, ${n0(slow.median)} minutes at the median`;
+  const maxV = Math.max(...D.by_modality.map(m => m.median)), step = 100, scale = Math.ceil(maxV / step) * step;
+  const items = D.by_modality.map(m => ({
+    key: m.modality, label: m.modality, value: m.median,
+    tip: `${m.modality}: median ${n0(m.median)} min across ${n0(m.orders)} orders`
+  }));
+  document.getElementById('modality').innerHTML = rows(items, { scale, step, emphKey: slow.modality }) + axis(scale, step);
+}
+
+/* 5. interface errors */
+{
+  document.getElementById('h-errors').textContent =
+    `${(T.interface_error_orders / T.orders * 100).toFixed(1)}% of orders hit an interface error at a handoff`;
+  document.getElementById('errors').innerHTML =
+    `<thead><tr><th>Error</th><th>Handoff</th><th>Count</th><th>% orders</th><th>Fix, min</th></tr></thead><tbody>` +
+    D.interface_errors.map(e => `<tr><td>${label[e.error_type]}</td><td>${handoff[e.at_status]}</td><td class="num">${n0(e.errors)}</td><td class="num">${e.pct_of_orders}%</td><td class="num">${n0(e.median_min_to_fix)}</td></tr>`).join('') + `</tbody>`;
+}
+
+/* data tables */
+document.getElementById('t-stages').innerHTML =
+  `<thead><tr><th>Stage</th><th>Median, min</th><th>90th pct, min</th></tr></thead><tbody>` +
+  D.stages.map(s => `<tr><td>${s.stage}</td><td class="num">${n0(s.median)}</td><td class="num">${n0(s.p90)}</td></tr>`).join('') + `</tbody>`;
+document.getElementById('t-shift').innerHTML =
+  `<thead><tr><th>Priority</th><th>Shift</th><th>Orders</th><th>Median, min</th></tr></thead><tbody>` +
+  D.by_shift.map(s => `<tr><td>${cap(s.priority)}</td><td>${s.shift}</td><td class="num">${n0(s.orders)}</td><td class="num">${n0(s.median)}</td></tr>`).join('') + `</tbody>`;
+document.getElementById('t-modality').innerHTML =
+  `<thead><tr><th>Modality</th><th>Orders</th><th>Median, min</th></tr></thead><tbody>` +
+  D.by_modality.map(m => `<tr><td>${m.modality}</td><td class="num">${n0(m.orders)}</td><td class="num">${n0(m.median)}</td></tr>`).join('') + `</tbody>`;
+
+/* tooltip */
+const tip = document.createElement('div');
+tip.className = 'tip'; tip.hidden = true; document.body.append(tip);
+function show(el, x, y) {
+  tip.textContent = el.dataset.tip; tip.hidden = false;
+  tip.style.left = Math.max(8, Math.min(x, innerWidth - tip.offsetWidth - 8)) + 'px';
+  tip.style.top = y + 'px';
+}
+document.addEventListener('pointermove', e => {
+  const el = e.target.closest ? e.target.closest('[data-tip]') : null;
+  if (!el) { tip.hidden = true; return; }
+  show(el, e.clientX + 14, e.clientY + 18);
+});
+document.addEventListener('pointerleave', () => { tip.hidden = true; });
+document.addEventListener('focusin', e => {
+  const el = e.target.closest ? e.target.closest('[data-tip]') : null;
+  if (!el) return;
+  const r = el.getBoundingClientRect(); show(el, r.left + 16, r.bottom + 6);
+});
+document.addEventListener('focusout', () => { tip.hidden = true; });
+</script>
